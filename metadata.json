@@ -1,0 +1,6 @@
+{
+  "name": "荒原篝火",
+  "description": "类饥荒生存探索手游，支持局域网同网络联机对战与实时语音交流、云端自动存档、自定义角色皮肤，以及Gemini生存向导对话与营地图片智能分析。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

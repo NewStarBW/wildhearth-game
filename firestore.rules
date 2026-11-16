@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserCloudProfile(data, userId) {
+      return data.keys().hasAll(['userId', 'nickname', 'email', 'activeSkinId', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['userId', 'nickname', 'email', 'activeSkinId', 'createdAt', 'updatedAt']) &&
+             data.userId is string && data.userId == userId &&
+             data.nickname is string && data.nickname.size() >= 1 && data.nickname.size() <= 30 &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 120 &&
+             data.activeSkinId is string && data.activeSkinId.size() >= 1 && data.activeSkinId.size() <= 128 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidCloudWorldSave(data, userId) {
+      return data.keys().hasAll(['userId', 'worldName', 'dayCount', 'timePhase', 'health', 'hunger', 'sanity', 'payloadJson', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['userId', 'worldName', 'dayCount', 'timePhase', 'health', 'hunger', 'sanity', 'payloadJson', 'createdAt', 'updatedAt']) &&
+             data.userId is string && data.userId == userId &&
+             data.worldName is string && data.worldName.size() >= 1 && data.worldName.size() <= 50 &&
+             data.dayCount is int && data.dayCount >= 1 && data.dayCount <= 99999 &&
+             data.timePhase in ['DAY', 'DUSK', 'NIGHT'] &&
+             data.health is int && data.health >= 0 && data.health <= 100 &&
+             data.hunger is int && data.hunger >= 0 && data.hunger <= 100 &&
+             data.sanity is int && data.sanity >= 0 && data.sanity <= 100 &&
+             data.payloadJson is string && data.payloadJson.size() >= 2 && data.payloadJson.size() <= 200000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidCloudSkinPreset(data, userId) {
+      return data.keys().hasAll(['userId', 'name', 'archetype', 'hatStyle', 'coatColorHex', 'hairColorHex', 'skinToneHex', 'accessory', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['userId', 'name', 'archetype', 'hatStyle', 'coatColorHex', 'hairColorHex', 'skinToneHex', 'accessory', 'createdAt', 'updatedAt']) &&
+             data.userId is string && data.userId == userId &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 40 &&
+             data.archetype is string && data.archetype.size() >= 1 && data.archetype.size() <= 30 &&
+             data.hatStyle is string && data.hatStyle.size() >= 1 && data.hatStyle.size() <= 30 &&
+             data.coatColorHex is string && data.coatColorHex.size() >= 4 && data.coatColorHex.size() <= 12 &&
+             data.hairColorHex is string && data.hairColorHex.size() >= 4 && data.hairColorHex.size() <= 12 &&
+             data.skinToneHex is string && data.skinToneHex.size() >= 4 && data.skinToneHex.size() <= 12 &&
+             data.accessory is string && data.accessory.size() >= 1 && data.accessory.size() <= 30 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserCloudProfile(incoming(), userId);
+      allow update: if isOwner(userId) && isValidId(userId) &&
+                       isValidUserCloudProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['nickname', 'email', 'activeSkinId', 'updatedAt']);
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /saves/{saveId} {
+        allow get: if isOwner(userId) && isValidId(saveId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(saveId) && isValidCloudWorldSave(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(saveId) &&
+                         isValidCloudSkinOrSaveOwnerCheck(userId) &&
+                         isValidCloudWorldSave(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['worldName', 'dayCount', 'timePhase', 'health', 'hunger', 'sanity', 'payloadJson', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(saveId);
+      }
+
+      match /skins/{skinId} {
+        allow get: if isOwner(userId) && isValidId(skinId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(skinId) && isValidCloudSkinPreset(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(skinId) &&
+                         isValidCloudSkinPreset(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'archetype', 'hatStyle', 'coatColorHex', 'hairColorHex', 'skinToneHex', 'accessory', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(skinId);
+      }
+    }
+
+    function isValidCloudSkinOrSaveOwnerCheck(userId) {
+      return request.auth.uid == userId;
+    }
+  }
+}

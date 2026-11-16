@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "UserCloudProfile": {
+      "title": "UserCloudProfile",
+      "description": "Survivor profile linked to an authenticated Google user for optional cloud backup.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the owner." },
+        "nickname": { "type": "string", "description": "Survivor display name." },
+        "email": { "type": "string", "description": "Survivor contact email." },
+        "activeSkinId": { "type": "string", "description": "Currently equipped skin preset ID." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": ["userId", "nickname", "email", "activeSkinId", "createdAt", "updatedAt"]
+    },
+    "CloudWorldSave": {
+      "title": "CloudWorldSave",
+      "description": "Auto-saved survival world state backed up to Firestore.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the owner." },
+        "worldName": { "type": "string", "description": "Name of the survival world." },
+        "dayCount": { "type": "integer", "description": "Current survival day." },
+        "timePhase": { "type": "string", "enum": ["DAY", "DUSK", "NIGHT"], "description": "Current day cycle phase." },
+        "health": { "type": "integer", "description": "Player health 0..100." },
+        "hunger": { "type": "integer", "description": "Player hunger 0..100." },
+        "sanity": { "type": "integer", "description": "Player sanity 0..100." },
+        "payloadJson": { "type": "string", "description": "Compact world state snapshot." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": ["userId", "worldName", "dayCount", "timePhase", "health", "hunger", "sanity", "payloadJson", "createdAt", "updatedAt"]
+    },
+    "CloudSkinPreset": {
+      "title": "CloudSkinPreset",
+      "description": "Custom survivor skin configuration synced to cloud.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the owner." },
+        "name": { "type": "string", "description": "Skin preset name." },
+        "archetype": { "type": "string", "description": "Character archetype." },
+        "hatStyle": { "type": "string", "description": "Equipped hat or hair style." },
+        "coatColorHex": { "type": "string", "description": "Hex color for outfit coat." },
+        "hairColorHex": { "type": "string", "description": "Hex color for hair." },
+        "skinToneHex": { "type": "string", "description": "Hex color for skin tone." },
+        "accessory": { "type": "string", "description": "Back or waist accessory." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": ["userId", "name", "archetype", "hatStyle", "coatColorHex", "hairColorHex", "skinToneHex", "accessory", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserCloudProfile" },
+      "description": "Private survivor profile for optional cloud backup."
+    },
+    "/users/{userId}/saves/{saveId}": {
+      "schema": { "$ref": "#/entities/CloudWorldSave" },
+      "description": "User-owned survival world auto-save backups."
+    },
+    "/users/{userId}/skins/{skinId}": {
+      "schema": { "$ref": "#/entities/CloudSkinPreset" },
+      "description": "User-owned custom character skin presets."
+    }
+  }
+}
